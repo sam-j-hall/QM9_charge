@@ -1,3 +1,7 @@
-# ignore all pickle files
+# ignore
+# python cache 
+__pychache__/
+*.py[cod]
+# pickle and pt data files
 *.pkl
 *.pt
