@@ -18,12 +18,12 @@ def train_model(model, loader, optimizer, device):
 
         pred = model(data)
         
-        data_size = data.spectrum.shape[0] // 200
-        data.spectrum = data.spectrum.view(data_size, 200)
+        data_size = data.spectrum.shape[0] // 300
+        data.spectrum = data.spectrum.view(data_size, 300)
 
         loss = nn.MSELoss()(pred, data.spectrum).float()
 
-        total_loss += loss.item() * data.num_graphs
+        total_loss += loss.item() / data.num_graphs
 
         loss.backward()
 
@@ -32,7 +32,7 @@ def train_model(model, loader, optimizer, device):
         # out = pred[0].detach().cpu().numpy()
         # true = data.spectrum[0].detach().cpu().numpy()
 
-    return total_loss / len(loader.dataset)#, embedding#, true, out
+    return total_loss #, embedding#, true, out
 
 def train_schnet(model, loader, optimizer, device):
     '''
