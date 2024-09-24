@@ -135,7 +135,7 @@ class XASDataset(InMemoryDataset):
     
     @property
     def processed_file_names(self):
-        return ['qm9_xas']
+        return ['qm9_xas.pt']
     
     def process(self):
         '''
