@@ -71,17 +71,14 @@ def val_test(model, loader, device):
 
         pred = model(data)
 
-        data_size = data.spectrum.shape[0] // 200
-        data.spectrum = data.spectrum.view(data_size, 200)
+        data_size = data.spectrum.shape[0] // 300
+        data.spectrum = data.spectrum.view(data_size, 300)
         
         loss = nn.MSELoss()(pred, data.spectrum)
 
-        total_loss += loss.item() * data.num_graphs
+        total_loss += loss.item() / data.num_graphs
 
-        out = pred[0].detach().cpu().numpy()
-        true = data.spectrum[0].detach().cpu().numpy()
-
-    return total_loss / len(loader.dataset)#, out, true
+    return total_loss
 
 def val_schnet(model, loader, device):
     '''
