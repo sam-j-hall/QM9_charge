@@ -1,6 +1,6 @@
 # ignore
 # python cache 
-__pychache__/
+__pycache__/
 *.py[cod]
 # pickle and pt data files
 *.pkl
