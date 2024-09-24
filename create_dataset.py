@@ -80,9 +80,9 @@ def get_bond_features(bond) -> List[Union[bool, int, float]]:
     '''
 
     if bond is None:
-        bond_feat = [0] * (BOND_FDIM)
+        bond_feat = [0] * BOND_FDIM
     else:
-        bond_feat = one_hot_encoding(bond.GetBondType(), BOND_FEATURES['bond_type'])
+        bond_feat = one_hot_encoding(bond.GetBondType(), BOND_FEATURES['bond_type']) 
 
     return bond_feat
         
@@ -110,13 +110,13 @@ def mol_to_nx(mol, spec):
         begin = (bond.GetBeginAtom()).GetIdx()
         end = (bond.GetEndAtom()).GetIdx()
         # --- Add edge for bond with one-hot encoding vector
-        G.add_edge(begin, end)#, edge_attr=get_bond_features(bond))
+        G.add_edge(begin, end, edge_attr=get_bond_features(bond))
 
     # --- Normalize spectra
     max_int = np.max(spec)
     norm_spec = 1.0 * (spec / max_int)
     # --- Set spectra to graph
-    G.graph['spectrum'] = norm_spec
+    G.graph['spectrum'] = np.float32(norm_spec)
 
     return G
 
@@ -154,12 +154,10 @@ class XASDataset(InMemoryDataset):
         # --- Iterate through dataframe
         for index, row in df.iterrows():
             mol = Chem.MolFromSmiles(row['SMILES'])
-
             spec = row['Spectra']
 
             gx = mol_to_nx(mol, spec)
             pyg_graph = from_networkx(gx)
-
             pyg_graph.idx = idx
             pyg_graph.smiles = row['SMILES']
 
@@ -169,13 +167,12 @@ class XASDataset(InMemoryDataset):
         random.Random(258).shuffle(data_list)
 
         if self.pre_filter is not None:
-            data_list = [data for data in data_list if self.pre_filter]
+            data_list = [data for data in data_list if self.pre_filter(data)]
 
         if self.pre_transform is not None:
             data_list = [self.pre_transform(data) for data in data_list]
 
         data, slices = self.collate(data_list)
-
         torch.save((data, slices), self.processed_paths[0])
 
         
