@@ -65,7 +65,7 @@ def get_atom_features(atom) -> List[Union[bool, int, float]]:
     else:
         atom_feat = one_hot_encoding(atom.GetAtomicNum(), ATOM_FEATURES['atomic_num']) + \
             one_hot_encoding(atom.GetHybridization(), ATOM_FEATURES['hybridization']) + \
-            [1.0 if atom.GetIsAromatic() else 0] + \
+            [1.0 if atom.GetIsAromatic() else 0.0] + \
             [atom.GetTotalNumHs()] + \
             [atom.GetFormalCharge()]
      
@@ -80,9 +80,9 @@ def get_bond_features(bond) -> List[Union[bool, int, float]]:
     '''
 
     if bond is None:
-        bond_feat = [0] * BOND_FDIM
+        bond_feat = [0] * (BOND_FDIM)
     else:
-        bond_feat = one_hot_encoding(bond.GetBondType(), BOND_FEATURES['bond_type']) 
+        bond_feat = one_hot_encoding(bond.GetBondType(), BOND_FEATURES['bond_type'])
 
     return bond_feat
         
@@ -115,8 +115,9 @@ def mol_to_nx(mol, spec):
     # --- Normalize spectra
     max_int = np.max(spec)
     norm_spec = 1.0 * (spec / max_int)
+    new = np.float32(norm_spec)
     # --- Set spectra to graph
-    G.graph['spectrum'] = np.float32(norm_spec)
+    G.graph['spectrum'] = new
 
     return G
 
@@ -173,6 +174,7 @@ class XASDataset(InMemoryDataset):
             data_list = [self.pre_transform(data) for data in data_list]
 
         data, slices = self.collate(data_list)
+
         torch.save((data, slices), self.processed_paths[0])
 
         
