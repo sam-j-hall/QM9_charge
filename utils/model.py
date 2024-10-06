@@ -48,7 +48,7 @@ def val_test(model, loader, device):
         data_size = data.spectrum.shape[0] // 300
         data.spectrum = data.spectrum.view(data_size, 300)
         
-        loss = nn.MSELoss()(pred, data.spectrum)
+        loss = nn.MSELoss()(pred, data.spectrum).float()
 
         total_loss += loss.item() / data.num_graphs
 
