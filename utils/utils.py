@@ -88,7 +88,7 @@ def bokeh_spectra(ml_spectra, true_spectra):
     p.grid.grid_line_dash = "dashed"
 
     # plot data
-    x = np.linspace(280,300,200)
+    x = np.linspace(280,300,300)
     p.line(x, true_spectra, line_width=3, line_color=HighContrast3[0], legend_label='True')
     p.line(x, ml_spectra, line_width=3, line_color=HighContrast3[1], legend_label='ML Model')
 
