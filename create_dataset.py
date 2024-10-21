@@ -63,11 +63,12 @@ def get_atom_features(atom) -> List[Union[bool, int, float]]:
     if atom is None:
         atom_feat = [0] * ATOM_FDIM
     else:
-        atom_feat = one_hot_encoding(atom.GetAtomicNum(), ATOM_FEATURES['atomic_num']) + \
+        # atom_feat = one_hot_encoding(atom.GetAtomicNum(), ATOM_FEATURES['atomic_num']) + \
+        atom_feat = [atom.GetAtomicNum()] + \
             one_hot_encoding(atom.GetHybridization(), ATOM_FEATURES['hybridization']) + \
             [1.0 if atom.GetIsAromatic() else 0.0] + \
-            [atom.GetTotalNumHs()] + \
-            [atom.GetFormalCharge()]
+            [atom.GetTotalNumHs()] # + \
+            # [atom.GetFormalCharge()]
      
     return atom_feat
 
@@ -136,7 +137,7 @@ class XASDataset(InMemoryDataset):
     
     @property
     def processed_file_names(self):
-        return ['qm9_xas.pt']
+        return ['qm9_xas_nocharge_num.pt']
     
     def process(self):
         '''
