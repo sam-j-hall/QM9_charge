@@ -3,8 +3,11 @@ from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_poo
 from torch_geometric.nn import GCNConv, GINConv, GINEConv, GATv2Conv, MLP, SAGEConv
 from torch_geometric.nn import aggr
 import torch.nn.functional as F
+from torch.optim import Adam
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+import lightning as L
 
-class GNN(torch.nn.Module):
+class QM9_GNN(L.LightningModule):
     '''
         Graph neural network class to run various types of GNNs
     '''
@@ -22,9 +25,10 @@ class GNN(torch.nn.Module):
                 graph_pooling (str): the pooling function for the GNN
         '''
 
-        super(GNN, self).__init__()
+        super(QM9_GNN, self).__init__()
 
         self.num_layer = num_layer
+        self.gnn_type = gnn_type
         self.drop_ratio = drop_ratio
         self.num_tasks = num_tasks
         self.graph_pooling = graph_pooling
@@ -36,10 +40,6 @@ class GNN(torch.nn.Module):
         # --- Sanity check number of layers
         if self.num_layer < 2:
             raise ValueError("Number of GNN layers must be greater than 1.")
-
-        # --- Create the GNN
-        self.gnn_node = GNN_node(num_layer, in_channels, out_channels, gnn_type=gnn_type, 
-                                 heads=heads, drop_ratio=drop_ratio)
         
         # --- Choose the selected pooling function
         if self.graph_pooling == "sum":
@@ -50,66 +50,6 @@ class GNN(torch.nn.Module):
             self.pool = global_max_pool
         else:
             raise ValueError("Invalid graph pooling type.")
-
-        # --- Add a final linear layer after GNN
-        self.graph_pred_linear = torch.nn.Linear(self.out_channels[-1], self.num_tasks)      	
-
-
-    def forward(self, batched_data):
-
-        # --- Forward pass through the GNN
-        node_embedding = self.gnn_node(batched_data)
-        # --- Create a total graph embeding by pooling all nodes
-        graph_embedding = self.pool(node_embedding, batched_data.batch)
-        # --- Activation function
-        p = torch.nn.LeakyReLU(0.1)
-        # --- Forward pass through linear layer
-        out = p(self.graph_pred_linear(graph_embedding))
-
-        return out#, node_embedding
-    
-
-    def _initialize_weights(self):
-        for m in self.modules():
-            if isinstance(m, torch.nn.Linear):
-                torch.nn.init.xavier_uniform_(m.weight)
-                if m.bias is not None:
-                    torch.nn.init.zeros_(m.bias)
-
-
-# --- GNN to generate node embedding
-class GNN_node(torch.nn.Module):
-    '''
-       GNN class
-
-        Output:
-        node representations
-    '''
-    def __init__(self, num_layer, in_channels, out_channels, gnn_type='gcn',
-                heads=None, drop_ratio=0.5):
-        '''
-            Args:
-                num_tasks (int): number of labels to be predicted
-                num_layer (int): number of layers in the NN
-                in_channels (list): size of each input layer
-                out_channels (list): size of each output layer
-                gnn_type (str): the specific GNN to use
-                heads (int): number of heads
-                drop_ratio (float): the drop_ratio 
-        '''
-
-        super(GNN_node, self).__init__()
-
-        self.num_layer = num_layer
-        self.drop_ratio = drop_ratio
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.heads = heads
-        self.gnn_type = gnn_type
-
-        # --- Sanity check number of layers
-        if self.num_layer < 2:
-            raise ValueError("Number of GNN layers must be greater than 1.")
         
         self.convs = torch.nn.ModuleList()
         self.batch_norms = torch.nn.ModuleList()
@@ -138,6 +78,9 @@ class GNN_node(torch.nn.Module):
                 ValueError('Undefined GNN type called {}'.format(gnn_type))
 
             self.batch_norms.append(torch.nn.BatchNorm1d(out_c))
+
+        # --- Add a final linear layer after GNN
+        self.graph_pred_linear = torch.nn.Linear(self.out_channels[-1], self.num_tasks)      	
 
 
     def forward(self, batched_data):
@@ -171,4 +114,61 @@ class GNN_node(torch.nn.Module):
              
         node_representation = h_list[-1]
 
-        return node_representation
+        # --- Create a total graph embeding by pooling all nodes
+        graph_embedding = self.pool(node_representation, batched_data.batch)
+        # --- Activation function
+        p = torch.nn.LeakyReLU(0.1)
+        # --- Forward pass through linear layer
+        out = p(self.graph_pred_linear(graph_embedding))
+
+        return out#, node_embedding
+    
+    def training_step(self, train_batch, batch_idx):
+        data = train_batch
+        spec_hat = self(data)
+        loss = F.mse_loss(spec_hat.view(-1, 1), data.spectrum.view(-1, 1))
+        self.log('train_loss', loss)
+        return loss
+    
+    def validation_step(self, val_batch, batch_idx):
+        data = val_batch
+        spec_hat = self(data)
+        loss = F.mse_loss(spec_hat.view(-1, 1), data.spectrum.view(-1, 1))
+        self.log('val_loss', loss)
+        return loss
+    
+    def test_step(self, test_batch, batch_idx):
+        data = test_batch
+        spec_hat = self(data)
+        loss = F.mse_loss(spec_hat.view(-1, 1), data.spectrum.view(-1, 1))
+        self.log('test_loss', loss)
+    
+    def configure_optimizers(self):
+        optimizer = Adam(self.parameters(),
+                         lr=0.01,
+                         betas=(0.9, 0.999), 
+                         eps=1e-08, 
+                         amsgrad=True)
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": ReduceLROnPlateau(
+                    optimizer, 
+                    mode='min',
+                    factor=0.5,
+                    patience=100,
+                    min_lr=0.0000001
+                ),
+                "monitor": "val_loss",
+                "frequency": 1
+            }
+        }
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, torch.nn.Linear):
+                torch.nn.init.xavier_uniform_(m.weight)
+                if m.bias is not None:
+                    torch.nn.init.zeros_(m.bias)
+
+
