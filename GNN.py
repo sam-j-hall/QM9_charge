@@ -36,6 +36,7 @@ class QM9_GNN(L.LightningModule):
         self.out_channels = out_channels
         self.heads = heads
         self._initialize_weights()
+        self.save_hyperparameters()
 
         # --- Sanity check number of layers
         if self.num_layer < 2:
