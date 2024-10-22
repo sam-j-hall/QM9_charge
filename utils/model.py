@@ -65,15 +65,15 @@ def get_spec_prediction(model, index, dataset, device):
     # --- Get a single graph from the test dataset
     graph_index = index
     graph_data = dataset[graph_index].to(device)
-    data = Batch.from_data_list([graph_data])
+    # data = Batch.from_data_list([graph_data])
 
     # --- Pass the graph through the model
     with torch.no_grad():
-        pred = model(data)
+        pred = model(dataset[index])
 
     # ---
     true_spectrum = graph_data.spectrum.cpu().numpy()
-    predicted_spectrum = pred.cpu().numpy()
-    predicted_spectrum = predicted_spectrum.reshape(-1)
+    predicted_spectrum = torch.flatten(pred)
+    # predicted_spectrum = predicted_spectrum.reshape(-1)
 
     return predicted_spectrum, true_spectrum
