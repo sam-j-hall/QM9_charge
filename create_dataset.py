@@ -63,8 +63,8 @@ def get_atom_features(atom) -> List[Union[bool, int, float]]:
     if atom is None:
         atom_feat = [0] * ATOM_FDIM
     else:
-        # atom_feat = [atom.GetAtomicNum()] + \
-        atom_feat = one_hot_encoding(atom.GetAtomicNum(), ATOM_FEATURES['atomic_num']) + \
+        # atom_feat = one_hot_encoding(atom.GetAtomicNum(), ATOM_FEATURES['atomic_num']) + \
+        atom_feat = [atom.GetAtomicNum()] + \
             one_hot_encoding(atom.GetHybridization(), ATOM_FEATURES['hybridization']) + \
             [1.0 if atom.GetIsAromatic() else 0.0] + \
             [atom.GetTotalNumHs()] + \
@@ -137,7 +137,7 @@ class XASDataset(InMemoryDataset):
     
     @property
     def processed_file_names(self):
-        return ['version3_charge_hot_num.pt']
+        return ['version1_charge_atomic_num_new.pt']
     
     def process(self):
         '''
@@ -157,9 +157,15 @@ class XASDataset(InMemoryDataset):
         for index, row in df.iterrows():
             mol = Chem.MolFromSmiles(row['SMILES'])
             spec = row['Spectra']
+            atoms = row['ASE atoms']
+
+            pos = atoms.get_positions()
+            z = atoms.get_atomic_numbers()
 
             gx = mol_to_nx(mol, spec)
             pyg_graph = from_networkx(gx)
+            pyg_graph.pos = torch.from_numpy(pos)
+            pyg_graph.z = torch.from_numpy(z)
             pyg_graph.idx = idx
             pyg_graph.smiles = row['SMILES']
 
