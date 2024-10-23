@@ -126,16 +126,18 @@ class QM9_GNN(L.LightningModule):
     
     def training_step(self, train_batch, batch_idx):
         data = train_batch
+        batch_size = len(data)
         spec_hat = self(data)
         loss = F.mse_loss(spec_hat.view(-1, 1), data.spectrum.view(-1, 1))
-        self.log('train_loss', loss)
+        self.log('train_loss', loss, logger=True, on_epoch=True, batch_size=batch_size)
         return loss
     
     def validation_step(self, val_batch, batch_idx):
         data = val_batch
+        batch_size = len(data)
         spec_hat = self(data)
         loss = F.mse_loss(spec_hat.view(-1, 1), data.spectrum.view(-1, 1))
-        self.log('val_loss', loss)
+        self.log('val_loss', loss, logger=True, on_epoch=True, batch_size=batch_size)
         return loss
     
     def test_step(self, test_batch, batch_idx):
