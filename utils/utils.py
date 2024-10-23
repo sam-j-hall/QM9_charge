@@ -4,6 +4,30 @@ from bokeh.plotting import figure
 from bokeh.models import SingleIntervalTicker, LinearAxis, NumeralTickFormatter, Span
 from bokeh.palettes import HighContrast3
 from rdkit import Chem
+import torch
+
+def get_spec_prediction(model, index, dataset, device):
+    '''
+    
+    '''
+    # --- Set the model to evaluation mode
+    model.eval()
+
+    # --- Get a single graph from the test dataset
+    graph_index = index
+    graph_data = dataset[graph_index].to(device)
+    # data = Batch.from_data_list([graph_data])
+
+    # --- Pass the graph through the model
+    with torch.no_grad():
+        pred = model(dataset[index])
+
+    # ---
+    true_spectrum = graph_data.spectrum.cpu().numpy()
+    predicted_spectrum = torch.flatten(pred)
+    # predicted_spectrum = predicted_spectrum.reshape(-1)
+
+    return predicted_spectrum, true_spectrum
 
 def plot_spectra(true_spectrum, predicted_spectrum, save_var):
     """
@@ -156,8 +180,10 @@ def bokeh_hist(dataframe, average):
 
     return(p)
 
-def calculate_rse(prediction, true_result):
+def calculate_rse(true_result, prediction):
     
+    prediction = prediction.numpy()
+
     del_E = 20 / len(prediction)
 
     numerator = np.sum(del_E * np.power((true_result - prediction),2))
