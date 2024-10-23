@@ -67,8 +67,8 @@ def get_atom_features(atom) -> List[Union[bool, int, float]]:
         atom_feat = one_hot_encoding(atom.GetAtomicNum(), ATOM_FEATURES['atomic_num']) + \
             one_hot_encoding(atom.GetHybridization(), ATOM_FEATURES['hybridization']) + \
             [1.0 if atom.GetIsAromatic() else 0.0] + \
-            [atom.GetTotalNumHs()] # + \
-            # [atom.GetFormalCharge()]
+            [atom.GetTotalNumHs()] + \
+            [atom.GetFormalCharge()]
      
     return atom_feat
 
@@ -137,7 +137,7 @@ class XASDataset(InMemoryDataset):
     
     @property
     def processed_file_names(self):
-        return ['version2_nocharge_hot_num.pt']
+        return ['version3_charge_hot_num.pt']
     
     def process(self):
         '''
