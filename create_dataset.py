@@ -164,7 +164,7 @@ class XASDataset(InMemoryDataset):
 
             gx = mol_to_nx(mol, spec)
             pyg_graph = from_networkx(gx)
-            pyg_graph.pos = torch.from_numpy(pos)
+            pyg_graph.x = torch.from_numpy(pos).float()
             pyg_graph.z = torch.from_numpy(z)
             pyg_graph.idx = idx
             pyg_graph.smiles = row['SMILES']
